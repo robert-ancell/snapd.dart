@@ -7,7 +7,7 @@ import 'http_unix_client.dart';
 
 /// Describes an app provided by a snap.
 class SnapApp {
-  /// The snap this app is part of
+  /// The snap this app is part of.
   final String snap;
 
   /// Name of the app.
@@ -27,7 +27,7 @@ class SnapApp {
   }
 }
 
-/// Described a channel available for a snap.
+/// Describes a channel available for a snap.
 class SnapChannel {
   /// Confinement of this snap in this channel.
   final String confinement;
@@ -43,6 +43,9 @@ class SnapChannel {
 
   SnapChannel({this.confinement, this.revision, this.size, this.version});
 }
+
+/// Describes a snap connection.
+class SnapConnection {}
 
 /// Describes a snap publisher.
 class SnapPublisher {
@@ -76,6 +79,66 @@ class SnapMedia {
   final int height;
 
   SnapMedia(this.type, this.url, {this.width, this.height});
+}
+
+/// Describes a snap plug.
+class SnapPlug {
+  /// The snap this plug is part of.
+  final String snap;
+
+  /// The name of this plug.
+  final String plug;
+
+  /// The interface this plug uses.
+  final String interface;
+
+  /// Apps that use this plug.
+  final List<String> apps;
+
+  /// Slots this plug is connected to.
+  /// FIXME
+  final List<void> connections;
+
+  SnapPlug({this.snap, this.plug, this.interface, this.apps, this.connections});
+
+  factory SnapPlug._fromJson(value) {
+    return SnapPlug(
+        snap: value['snap'],
+        plug: value['plug'],
+        interface: value['interface'],
+        apps: value['apps'] != null ? value['apps'].cast<String>() : [],
+        connections: []);
+  }
+}
+
+/// Describes a snap slot.
+class SnapSlot {
+  /// The snap this slot is part of.
+  final String snap;
+
+  /// The name of this slot.
+  final String slot;
+
+  /// The interface this slot uses.
+  final String interface;
+
+  /// Apps that use this slot.
+  final List<String> apps;
+
+  /// Plugs this slot is connected to.
+  /// FIXME
+  final List<void> connections;
+
+  SnapSlot({this.snap, this.slot, this.interface, this.apps, this.connections});
+
+  factory SnapSlot._fromJson(value) {
+    return SnapSlot(
+        snap: value['snap'],
+        slot: value['slot'],
+        interface: value['interface'],
+        apps: value['apps'] != null ? value['apps'].cast<String>() : [],
+        connections: []);
+  }
 }
 
 /// Describes a snap package.
@@ -166,6 +229,17 @@ class Snap {
   String toString() {
     return "Snap('${name}')";
   }
+}
+
+/// Response received when getting snap connections.
+class SnapdConnectionsResponse {
+  /// Available plugs.
+  final List<SnapPlug> plugs;
+
+  /// Available slots.
+  final List<SnapSlot> slots;
+
+  SnapdConnectionsResponse({this.plugs, this.slots});
 }
 
 /// Response received when getting system information
@@ -466,6 +540,18 @@ class SnapdClient {
       apps.add(SnapApp._fromJson(app));
     }
     return apps;
+  }
+
+  /// Gets the snap connections.
+  Future<SnapdConnectionsResponse> connections() async {
+    var result = await _getSync('/v2/connections');
+    print(result['established']);
+    //print (result['undesired']);
+    var plugs =
+        result['plugs'].map<SnapPlug>((e) => SnapPlug._fromJson(e)).toList();
+    var slots =
+        result['slots'].map<SnapSlot>((e) => SnapSlot._fromJson(e)).toList();
+    return SnapdConnectionsResponse(plugs: plugs, slots: slots);
   }
 
   /// Sets the user agent sent in requests to snapd.
